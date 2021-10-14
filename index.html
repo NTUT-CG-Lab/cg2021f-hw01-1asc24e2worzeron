@@ -18,6 +18,7 @@
 		<script src="./opentype.min.js"></script>
 		<script src="./three.min.js"></script>
 		<script src="./TTFLoader.js"></script>
+		<script src="./PLYLoader.js"></script>
 		
 		<script src="scoreoutputer.min.js"></script>
 	
@@ -39,7 +40,7 @@
 				so.addChild("滑鼠點擊 12 地支分別跳轉網頁", 1, true);
 				so.addChild("顯示\"高等計算機圖形作業\"", 1, true);
 				so.addChild("時鐘效果", 1, false);
-				so.addChild("任何 ply 格式模型", 1, false);
+				so.addChild("任何 ply 格式模型", 1, true);
 
 				//產生自評表，參數如下所示
 				so.renderModal(
@@ -76,12 +77,23 @@
 				bevelThickness = 2,
 				bevelSize = 1.5;
 
-			let font = null;
-			let ttfFont = './edukai-4.0.ttf';
+			// 這個會影響時鐘
+			let planeCenterX = 0, planeCenterZ = -25;
 
+			// 檔案讀取
+			let ttfFont = './edukai-4.0.ttf';
+			let font = null;
+			
+			let plyFile = './BeerCup11k.ply';
+			
+			// .ply 動畫
+			let railState = 1, railSpeed = 1, cupRotationSpeed = 0.01;
+
+			// 滑鼠移動事件
 			let targetRotation = 0;
 			let targetRotationOnPointerDown = 0;
 
+			// 滑鼠點擊事件
 			let pointerX = 0;
 			let pointerXOnPointerDown = 0;
 			
@@ -109,15 +121,15 @@
 
 				scene = new THREE.Scene();
 				scene.background = new THREE.Color( 0x6688cc );
-				scene.fog = new THREE.Fog( 0x555555, -50, 2500 ); // 調亮、near 調負，避免太暗
+				scene.fog = new THREE.Fog( 0x888888, 0, 3200 ); // 調亮、near 調負，避免太暗
 
 				// LIGHTS
 
-				const dirLight = new THREE.DirectionalLight( 0xffffff, 0.6 ); // 稍微調亮一點
+				const dirLight = new THREE.DirectionalLight( 0xffffff, 0.5 ); // 稍微調亮一點
 				dirLight.position.set( 0, 100, 200 ).normalize(); // 微調
 				scene.add( dirLight );
 
-				const pointLight = new THREE.PointLight( 0xffffff, 1.75 );
+				const pointLight = new THREE.PointLight( 0xffffff, 1.5 );
 				pointLight.position.set( 0, 100, 90 );
 				pointLight.color.setHSL( Math.random(), 1, 0.75 );
 				scene.add( pointLight );
@@ -130,6 +142,11 @@
 				group.position.y = 100;
 
 				scene.add( group );
+				
+				plyGroup = new THREE.Group();
+				plyGroup.position.set(-250 + planeCenterX,0,250 + planeCenterZ);
+				
+				group.add( plyGroup );
 				
 				sexagenaryCycle = {
 					'子': { 'uuid': '', 'reference': 'https://ntut-cg-lab.github.io/cg2021f-hw01-1asc24e2worzeron/' },
@@ -150,61 +167,80 @@
 				let textSize = 25, radius = 120;
 
 				// ttfloader 物件
-				const loader = new THREE.TTFLoader();
+				const ttfLoader = new THREE.TTFLoader();
 				
-				loader.load( ttfFont, function ( json ) {
+				ttfLoader.load( ttfFont, function ( json ) {
 					console.log("ttf Font:");
 					console.log(json)
 					font = new THREE.Font( json );
 					
 					// 「高等計算機圖學」的 Mesh 物件
-					createText('高等計算機圖學作業',35,-90,0,-35,65);
+					createText('高等計算機圖學作業',35,-90,planeCenterX,-35,planeCenterZ+80);
 					
 					// 天干的 Mesh 物件
-					createText('子',textSize,0,0,radius+radius,-25);
-					createText('丑',textSize,0,radius/2,radius+(radius/2)*Math.sqrt(3),-25);
-					createText('寅',textSize,0,(radius/2)*Math.sqrt(3),radius+(radius/2),-25);
-					createText('卯',textSize,0,radius,radius,-25);
-					createText('晨',textSize,0,(radius/2)*Math.sqrt(3),radius-(radius/2),-25);
-					createText('巳',textSize,0,radius/2,radius-(radius/2)*Math.sqrt(3),-25);
+					createText('子',textSize,planeCenterX,0,radius+radius,planeCenterZ);
+					createText('丑',textSize,planeCenterX,radius/2,radius+(radius/2)*Math.sqrt(3),planeCenterZ);
+					createText('寅',textSize,planeCenterX,(radius/2)*Math.sqrt(3),radius+(radius/2),planeCenterZ);
+					createText('卯',textSize,planeCenterX,radius,radius,planeCenterZ);
+					createText('晨',textSize,planeCenterX,(radius/2)*Math.sqrt(3),radius-(radius/2),planeCenterZ);
+					createText('巳',textSize,planeCenterX,radius/2,radius-(radius/2)*Math.sqrt(3),planeCenterZ);
 					
 					// 地支的 Mesh 物件
-					createText('午',textSize,0,0,0,-25);
-					createText('未',textSize,0,-radius/2,radius-(radius/2)*Math.sqrt(3),-25);
-					createText('申',textSize,0,-(radius/2)*Math.sqrt(3),radius-(radius/2),-25);
-					createText('酋',textSize,0,-radius,radius,-25);
-					createText('戍',textSize,0,-(radius/2)*Math.sqrt(3),radius+(radius/2),-25);
-					createText('亥',textSize,0,-radius/2,radius+(radius/2)*Math.sqrt(3),-25);
+					createText('午',textSize,planeCenterX,0,0,planeCenterZ);
+					createText('未',textSize,planeCenterX,-radius/2,radius-(radius/2)*Math.sqrt(3),planeCenterZ);
+					createText('申',textSize,planeCenterX,-(radius/2)*Math.sqrt(3),radius-(radius/2),planeCenterZ);
+					createText('酋',textSize,planeCenterX,-radius,radius,planeCenterZ);
+					createText('戍',textSize,planeCenterX,-(radius/2)*Math.sqrt(3),radius+(radius/2),planeCenterZ);
+					createText('亥',textSize,planeCenterX,-radius/2,radius+(radius/2)*Math.sqrt(3),planeCenterZ);
 				} );
-				
-				// 下方的平面
-				clockPlane = new THREE.Mesh(
-					new THREE.PlaneGeometry( 500, 500 ),
-					new THREE.MeshBasicMaterial( { color: 0xffffff, transparent: false } )
-				);
-				clockPlane.position.y = -20;
-				clockPlane.position.z = -25;
-				clockPlane.rotation.x = - Math.PI / 2;
-				group.add( clockPlane );
 				
 				// 時鐘後平面
 				let clockCircle = new THREE.Mesh(
 					new THREE.CylinderGeometry(radius+textSize, radius+textSize, 0.2, 32),
 					new THREE.MeshBasicMaterial({ color: 0x88ccff, opacity: 0.5, transparent: true })
 				);
-				clockCircle.position.x = 0;
-				clockCircle.position.y = radius+hover+10;
-				clockCircle.position.z = -28;
+				clockCircle.position.set(planeCenterX,radius+hover+10,planeCenterZ-3);
 				clockCircle.rotation.x = 90 * (Math.PI / 180);
 				group.add(clockCircle);
+				
+				// 下方的平面
+				clockPlane = new THREE.Mesh(
+					new THREE.PlaneGeometry( 500, 500 ),
+					new THREE.MeshBasicMaterial( { color: 0xbbffee, transparent: false } )
+				);
+				clockPlane.position.set(planeCenterX,-20,planeCenterZ);
+				clockPlane.rotation.x = - Math.PI / 2;
+				group.add( clockPlane );
+				
+				// .ply 物件
+				const plyLoader = new THREE.PLYLoader();
+				
+				plyLoader.load( plyFile, function (geometry) {
+					//Update normal vector of vertex
+					geometry.computeVertexNormals();
 
-				const plane = new THREE.Mesh(
+					//Create a texture and add the model to the scene channel
+					var material = new THREE.MeshStandardMaterial( {
+						color: 0xffffff,
+						flatShading: true,
+						transparent: true,
+						opacity: 0.6,
+					} );
+					var mesh = new THREE.Mesh( geometry, material );
+					mesh.position.set(0,-20,0);
+					mesh.rotation.set(Math.PI/2,Math.PI,0)
+					mesh.scale.set(5,5,5);
+					plyGroup.add( mesh );
+				});
+				
+				// 地面
+				const ground = new THREE.Mesh(
 					new THREE.PlaneGeometry( 10000, 10000 ),
 					new THREE.MeshBasicMaterial( { color: 0xffffff, opacity: 0.25, transparent: true } )
 				);
-				plane.position.y = 60;
-				plane.rotation.x = - Math.PI / 2;
-				scene.add( plane );
+				ground.position.y = 60;
+				ground.rotation.x = - Math.PI / 2;
+				scene.add( ground );
 
 				// RENDERER
 
@@ -346,12 +382,49 @@
 				document.removeEventListener( 'pointerup', onPointerUp );
 
 			}
+			
+			function plyAnimation() {
+				
+				if ( railState == 1 ) {
+					plyGroup.position.z -= railSpeed;
+					if ( plyGroup.position.z <= -250 + planeCenterZ ) {
+						plyGroup.position.z = -250 + planeCenterZ;
+						railState = 2;
+					}
+				}
+				else if ( railState == 2 ) {
+					plyGroup.position.x += railSpeed;
+					if ( plyGroup.position.x >= 250 + planeCenterX ) {
+						plyGroup.position.x = 250 + planeCenterX;
+						railState = 3;
+					}
+				}
+				else if ( railState == 3 ) {
+					plyGroup.position.z += railSpeed;
+					if ( plyGroup.position.z >= 250 + planeCenterZ ) {
+						plyGroup.position.z = 250 + planeCenterZ;
+						railState = 4;
+					}
+				}
+				else if ( railState == 4 ) {
+					plyGroup.position.x -= railSpeed;
+					if ( plyGroup.position.x <= -250 + planeCenterX ) {
+						plyGroup.position.x = -250 + planeCenterX;
+						railState = 1;
+					}
+				}
+				
+				plyGroup.rotation.y += cupRotationSpeed;
+				
+			}
 
 			function animate() {
 
 				requestAnimationFrame( animate );
 
 				group.rotation.y += ( targetRotation - group.rotation.y ) * 0.05;
+				
+				plyAnimation();
 
 				camera.lookAt( cameraTarget );
 
